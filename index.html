@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SWFT — نظام الشحن</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --primary: #1a1a2e;
+  --accent: #00d4aa;
+  --accent2: #ff6b35;
+  --bg: #f5f5f0;
+  --white: #ffffff;
+  --gray: #8a8a8a;
+  --light: #f0f0eb;
+  --border: #e0e0d8;
+  --danger: #e74c3c;
+  --warn: #f39c12;
+  --success: #00b894;
+  --info: #0984e3;
+  --purple: #6c5ce7;
+  --radius: 12px;
+  --shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Cairo', sans-serif; background: var(--bg); color: var(--primary); min-height: 100vh; }
+body.en { font-family: 'Inter', sans-serif; direction: ltr; }
+
+/* LOGIN */
+#login-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary);
+  position: relative;
+  overflow: hidden;
+}
+#login-screen::before {
+  content: '';
+  position: absolute;
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(0,212,170,0.15) 0%, transparent 70%);
+  top: -100px; right: -100px;
+  border-radius: 50%;
+}
+#login-screen::after {
+  content: '';
+  position: absolute;
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(255,107,53,0.1) 0%, transparent 70%);
+  bottom: -50px; left: -50px;
+  border-radius: 50%;
+}
+.login-card {
+  background: var(--white);
+  border-radius: 20px;
+  padding: 48px 40px;
+  width: 100%;
+  max-width: 400px;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.login-logo {
+  text-align: center;
+  margin-bottom: 32px;
+}
+.login-logo .logo-mark {
+  width: 64px; height: 64px;
+  background: var(--primary);
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+.login-logo .logo-text {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  color: var(--primary);
+}
+.login-logo .logo-sub {
+  font-size: 13px;
+  color: var(--gray);
+  margin-top: 4px;
+}
+.form-group { margin-bottom: 16px; }
+.form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.form-group input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--primary);
+  background: var(--bg);
+  transition: border-color 0.2s;
+  outline: none;
+}
+.form-group input:focus { border-color: var(--accent); background: var(--white); }
+.btn-login {
+  width: 100%;
+  padding: 14px;
+  background: var(--primary);
+  color: var(--white);
+  border: none;
+  border-radius: var(--radius);
+  font-size: 16px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn-login:hover { background: var(--accent); color: var(--primary); }
+.login-error {
+  background: #fff0f0;
+  border: 1px solid #fcc;
+  color: var(--danger);
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-top: 12px;
+  display: none;
+  text-align: center;
+}
+.lang-toggle-login {
+  text-align: center;
+  margin-top: 20px;
+}
+.lang-btn {
+  background: none;
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  padding: 6px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--gray);
+  transition: all 0.2s;
+}
+.lang-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* APP SHELL */
+#app { display: none; min-height: 100vh; }
+
+/* TOPBAR */
+.topbar {
+  background: var(--primary);
+  color: var(--white);
+  padding: 0 24px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+}
+.topbar-logo {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--accent);
+}
+.topbar-role {
+  font-size: 12px;
+  background: rgba(255,255,255,0.1);
+  padding: 4px 12px;
+  border-radius: 20px;
+  color: rgba(255,255,255,0.8);
+}
+.topbar-user { font-size: 14px; color: rgba(255,255,255,0.7); }
+.topbar-right { margin-right: auto; display: flex; align-items: center; gap: 12px; }
+body.en .topbar-right { margin-right: 0; margin-left: auto; }
+.btn-logout, .btn-lang {
+  background: rgba(255,255,255,0.1);
+  border: none;
+  color: var(--white);
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-family: inherit;
+  transition: background 0.2s;
+}
+.btn-logout:hover, .btn-lang:hover { background: rgba(255,255,255,0.2); }
+
+/* TABS */
+.tabs-bar {
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  display: flex;
+  gap: 0;
+}
+.tab-btn {
+  padding: 16px 20px;
+  border: none;
+  background: none;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--gray);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+}
+.tab-btn.active { color: var(--primary); border-bottom-color: var(--accent); }
+.tab-btn:hover { color: var(--primary); }
+
+/* MAIN CONTENT */
+.main { padding: 24px; max-width: 1200px; margin: 0 auto; }
+.page { display: none; }
+.page.active { display: block; }
+
+/* STATS */
+.stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.stat-box {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  border-top: 4px solid var(--border);
+}
+.stat-box.green { border-top-color: var(--success); }
+.stat-box.blue { border-top-color: var(--info); }
+.stat-box.orange { border-top-color: var(--accent2); }
+.stat-box.red { border-top-color: var(--danger); }
+.stat-box.purple { border-top-color: var(--purple); }
+.stat-box.warn { border-top-color: var(--warn); }
+.stat-num { font-size: 32px; font-weight: 700; line-height: 1; }
+.stat-label { font-size: 12px; color: var(--gray); margin-top: 6px; font-weight: 500; }
+
+/* CARD */
+.card {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+.card-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.card-title { font-size: 15px; font-weight: 600; }
+.card-body { padding: 20px; }
+
+/* FILTERS */
+.filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; flex: 1; }
+.filters input, .filters select {
+  padding: 8px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  background: var(--bg);
+  color: var(--primary);
+  transition: border-color 0.2s;
+}
+.filters input:focus, .filters select:focus { border-color: var(--accent); }
+.filters input { min-width: 180px; }
+
+/* BUTTONS */
+.btn {
+  padding: 9px 18px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn-primary { background: var(--primary); color: var(--white); }
+.btn-primary:hover { background: #2d2d4e; }
+.btn-accent { background: var(--accent); color: var(--primary); }
+.btn-accent:hover { opacity: 0.85; }
+.btn-danger { background: var(--danger); color: var(--white); }
+.btn-outline { background: none; border: 1.5px solid var(--border); color: var(--primary); }
+.btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+
+/* TABLE */
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th {
+  background: var(--bg);
+  padding: 10px 14px;
+  text-align: right;
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--gray);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+body.en th { text-align: left; }
+td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--primary);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--light); }
+
+/* STATUS BADGES */
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.b-delivered { background: #d4f7ee; color: #00695c; }
+.b-out { background: #dbeafe; color: #1565c0; }
+.b-pending { background: #fef3c7; color: #92400e; }
+.b-failed { background: #fee2e2; color: #991b1b; }
+.b-no-answer { background: #ede9fe; color: #5b21b6; }
+.b-postponed { background: #fff3e0; color: #e65100; }
+.b-address { background: #e0f2fe; color: #0277bd; }
+.b-refused { background: #fce4ec; color: #880e4f; }
+
+/* COURIER APP */
+.courier-layout { display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
+@media (max-width: 768px) { .courier-layout { grid-template-columns: 1fr; } }
+
+.order-list { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.order-list-header { padding: 16px; background: var(--primary); color: var(--white); font-weight: 600; font-size: 15px; }
+.order-item {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.order-item:hover { background: var(--light); }
+.order-item.selected { background: #e8fdf6; border-right: 3px solid var(--accent); }
+body.en .order-item.selected { border-right: none; border-left: 3px solid var(--accent); }
+.order-item-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.order-num { font-weight: 700; font-size: 13px; }
+.order-cod { font-weight: 700; color: var(--success); font-size: 13px; }
+.order-name { font-size: 12px; color: var(--gray); margin-bottom: 3px; }
+.order-area { font-size: 12px; color: var(--gray); }
+
+.action-panel { display: flex; flex-direction: column; gap: 16px; }
+.selected-info {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+}
+.selected-info h3 { font-size: 16px; font-weight: 700; margin-bottom: 12px; color: var(--accent); }
+.info-row { display: flex; gap: 8px; margin-bottom: 8px; font-size: 13px; }
+.info-label { color: var(--gray); min-width: 80px; font-weight: 600; }
+.cod-big { font-size: 24px; font-weight: 700; color: var(--success); margin: 12px 0; }
+
+.status-buttons { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; }
+.section-lbl { font-size: 11px; font-weight: 700; color: var(--gray); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; margin-top: 16px; }
+.section-lbl:first-child { margin-top: 0; }
+.status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.status-btn {
+  padding: 12px 10px;
+  border: 2px solid var(--border);
+  background: var(--white);
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  line-height: 1.3;
+}
+.status-btn .icon { font-size: 20px; }
+.status-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.sb-delivered { border-color: var(--success); color: var(--success); }
+.sb-delivered:hover { background: #d4f7ee; }
+.sb-out { border-color: var(--info); color: var(--info); }
+.sb-out:hover { background: #dbeafe; }
+.sb-no-answer { border-color: var(--purple); color: var(--purple); }
+.sb-no-answer:hover { background: #ede9fe; }
+.sb-postponed { border-color: var(--warn); color: var(--warn); }
+.sb-postponed:hover { background: #fff3e0; }
+.sb-address { border-color: var(--info); color: #0277bd; }
+.sb-address:hover { background: #e0f2fe; }
+.sb-refused { border-color: #880e4f; color: #880e4f; }
+.sb-refused:hover { background: #fce4ec; }
+.sb-failed { border-color: var(--danger); color: var(--danger); }
+.sb-failed:hover { background: #fee2e2; }
+.sb-pending { border-color: var(--gray); color: var(--gray); }
+.sb-pending:hover { background: var(--light); }
+
+.notes-box { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; }
+.notes-box textarea {
+  width: 100%;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+  outline: none;
+  color: var(--primary);
+  background: var(--bg);
+  transition: border-color 0.2s;
+}
+.notes-box textarea:focus { border-color: var(--accent); background: var(--white); }
+
+/* COURIER SUMMARY */
+.summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.summary-item { text-align: center; padding: 12px; background: var(--bg); border-radius: 8px; }
+.summary-num { font-size: 22px; font-weight: 700; }
+.summary-lbl { font-size: 11px; color: var(--gray); font-weight: 600; margin-top: 2px; }
+
+/* ADMIN: ADD ORDER FORM */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { font-size: 12px; font-weight: 700; color: var(--gray); text-transform: uppercase; letter-spacing: 0.04em; }
+.field input, .field select, .field textarea {
+  padding: 10px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  background: var(--bg);
+  color: var(--primary);
+  transition: border-color 0.2s;
+}
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); background: var(--white); }
+
+/* EXPORT */
+.export-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; margin-bottom: 16px; }
+.field-check { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; padding: 8px 12px; border: 1.5px solid var(--border); border-radius: 8px; transition: all 0.2s; }
+.field-check:hover { border-color: var(--accent); }
+.field-check input[type=checkbox] { accent-color: var(--accent); width: 16px; height: 16px; }
+.field-check.checked { border-color: var(--accent); background: #e8fdf6; }
+.preview-box { background: var(--bg); border-radius: 8px; padding: 12px 16px; font-family: monospace; font-size: 12px; overflow-x: auto; white-space: pre; color: var(--gray); margin-bottom: 16px; border: 1px solid var(--border); }
+
+/* MODAL */
+.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 999; padding: 20px; display: none; }
+.modal-bg.open { display: flex; }
+.modal { background: var(--white); border-radius: 16px; padding: 28px; width: 100%; max-width: 520px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+.modal h3 { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+.modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+/* TOAST */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: var(--primary);
+  color: var(--white);
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 9999;
+  transition: transform 0.3s ease;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+.toast.success { background: var(--success); }
+.toast.error { background: var(--danger); }
+
+/* LOADING */
+.loading { display: flex; align-items: center; justify-content: center; padding: 40px; color: var(--gray); font-size: 14px; gap: 10px; }
+.spinner { width: 20px; height: 20px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.empty { text-align: center; padding: 40px; color: var(--gray); font-size: 14px; }
+
+/* COURIER PICKER */
+.courier-picker { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+.courier-tab { padding: 8px 16px; border: 2px solid var(--border); border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: 600; font-family: inherit; background: var(--white); color: var(--gray); transition: all 0.2s; }
+.courier-tab.active { border-color: var(--accent); color: var(--primary); background: #e8fdf6; }
+
+@media (max-width: 600px) {
+  .main { padding: 16px; }
+  .topbar { padding: 0 16px; }
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ADMIN TABS */
+.admin-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.admin-tab { padding: 8px 20px; border: 2px solid var(--border); border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: 600; font-family: inherit; background: var(--white); color: var(--gray); transition: all 0.2s; }
+.admin-tab.active { background: var(--primary); color: var(--white); border-color: var(--primary); }
+.admin-section { display: none; }
+.admin-section.active { display: block; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-mark">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <path d="M4 16L16 4L28 16L16 28L4 16Z" fill="#00d4aa"/>
+          <path d="M10 16L16 10L22 16L16 22L10 16Z" fill="white"/>
+        </svg>
+      </div>
+      <div class="logo-text">SWFT</div>
+      <div class="logo-sub" id="login-sub">نظام إدارة الشحنات</div>
+    </div>
+    <div class="form-group">
+      <label id="lbl-email">البريد الإلكتروني</label>
+      <input type="email" id="login-email" placeholder="example@swft.com" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label id="lbl-pass">كلمة المرور</label>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn-login" onclick="doLogin()" id="login-btn">
+      <span id="login-btn-text">دخول</span>
+    </button>
+    <div class="login-error" id="login-error"></div>
+    <div class="lang-toggle-login">
+      <button class="lang-btn" onclick="toggleLang()">English / عربي</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-logo">SWFT</div>
+    <div class="topbar-role" id="topbar-role">أدمن</div>
+    <div class="topbar-user" id="topbar-user"></div>
+    <div class="topbar-right">
+      <button class="btn-lang" onclick="toggleLang()" id="lang-btn">EN</button>
+      <button class="btn-logout" onclick="doLogout()" id="logout-btn">خروج</button>
+    </div>
+  </div>
+
+  <!-- ADMIN VIEW -->
+  <div id="admin-view">
+    <div class="tabs-bar">
+      <button class="tab-btn active" onclick="adminTab('orders')" id="atab-orders" data-ar="الأوردرات" data-en="Orders">الأوردرات</button>
+      <button class="tab-btn" onclick="adminTab('couriers')" id="atab-couriers" data-ar="المناديب" data-en="Couriers">المناديب</button>
+      <button class="tab-btn" onclick="adminTab('export')" id="atab-export" data-ar="التصدير" data-en="Export">التصدير</button>
+    </div>
+    <div class="main">
+
+      <!-- ORDERS PAGE -->
+      <div id="admin-orders" class="admin-section active">
+        <div class="stats-row" id="admin-stats">
+          <div class="stat-box green"><div class="stat-num" id="st-delivered">0</div><div class="stat-label" data-ar="تم التوصيل" data-en="Delivered">تم التوصيل</div></div>
+          <div class="stat-box blue"><div class="stat-num" id="st-out">0</div><div class="stat-label" data-ar="خارج للتوصيل" data-en="Out for Delivery">خارج للتوصيل</div></div>
+          <div class="stat-box orange"><div class="stat-num" id="st-pending">0</div><div class="stat-label" data-ar="في الانتظار" data-en="Pending">في الانتظار</div></div>
+          <div class="stat-box purple"><div class="stat-num" id="st-noanswer">0</div><div class="stat-label" data-ar="لم يرد" data-en="No Answer">لم يرد</div></div>
+          <div class="stat-box warn"><div class="stat-num" id="st-issues">0</div><div class="stat-label" data-ar="تحتاج متابعة" data-en="Needs Follow-up">تحتاج متابعة</div></div>
+          <div class="stat-box red"><div class="stat-num" id="st-failed">0</div><div class="stat-label" data-ar="فشل التوصيل" data-en="Failed">فشل التوصيل</div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title" data-ar="كل الأوردرات" data-en="All Orders">كل الأوردرات</span>
+            <div class="filters">
+              <input type="text" id="search-q" placeholder="بحث..." oninput="loadOrders()" data-ar-ph="بحث..." data-en-ph="Search...">
+              <select id="filter-status" onchange="loadOrders()">
+                <option value="" data-ar="كل الحالات" data-en="All Statuses">كل الحالات</option>
+                <option value="delivered" data-ar="تم التوصيل" data-en="Delivered">تم التوصيل</option>
+                <option value="out" data-ar="خارج للتوصيل" data-en="Out for Delivery">خارج للتوصيل</option>
+                <option value="pending" data-ar="في الانتظار" data-en="Pending">في الانتظار</option>
+                <option value="no-answer" data-ar="لم يرد" data-en="No Answer">لم يرد</option>
+                <option value="postponed" data-ar="طلب التأجيل" data-en="Postponed">طلب التأجيل</option>
+                <option value="address" data-ar="تغيير العنوان" data-en="Address Change">تغيير العنوان</option>
+                <option value="refused" data-ar="رفض الاستلام" data-en="Refused">رفض الاستلام</option>
+                <option value="failed" data-ar="فشل التوصيل" data-en="Failed">فشل التوصيل</option>
+              </select>
+              <select id="filter-courier" onchange="loadOrders()">
+                <option value="" data-ar="كل المناديب" data-en="All Couriers">كل المناديب</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" onclick="openAddOrder()" data-ar="+ أوردر جديد" data-en="+ New Order">+ أوردر جديد</button>
+            <button class="btn btn-outline" onclick="exportCSV()" data-ar="⬇ تصدير" data-en="⬇ Export">⬇ تصدير</button>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th data-ar="رقم الأوردر" data-en="Order #">رقم الأوردر</th>
+                  <th data-ar="العميل" data-en="Customer">العميل</th>
+                  <th data-ar="الهاتف" data-en="Phone">الهاتف</th>
+                  <th data-ar="المنطقة" data-en="Area">المنطقة</th>
+                  <th data-ar="المندوب" data-en="Courier">المندوب</th>
+                  <th data-ar="COD" data-en="COD">COD</th>
+                  <th data-ar="الحالة" data-en="Status">الحالة</th>
+                  <th data-ar="ملاحظات" data-en="Notes">ملاحظات</th>
+                  <th data-ar="آخر تحديث" data-en="Updated">آخر تحديث</th>
+                </tr>
+              </thead>
+              <tbody id="orders-tbody">
+                <tr><td colspan="9"><div class="loading"><div class="spinner"></div> جاري التحميل...</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- COURIERS PAGE -->
+      <div id="admin-couriers" class="admin-section">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title" data-ar="المناديب" data-en="Couriers">المناديب</span>
+            <button class="btn btn-primary" onclick="openAddCourier()" data-ar="+ مندوب جديد" data-en="+ New Courier">+ مندوب جديد</button>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th data-ar="الاسم" data-en="Name">الاسم</th>
+                  <th data-ar="الاسم بالعربي" data-en="Arabic Name">الاسم بالعربي</th>
+                  <th data-ar="الإيميل" data-en="Email">الإيميل</th>
+                  <th data-ar="الحالة" data-en="Status">الحالة</th>
+                  <th data-ar="الأوردرات" data-en="Orders">الأوردرات</th>
+                  <th data-ar="إجراءات" data-en="Actions">إجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="couriers-tbody">
+                <tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- EXPORT PAGE -->
+      <div id="admin-export" class="admin-section">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title" data-ar="تصدير البيانات" data-en="Export Data">تصدير البيانات</span>
+          </div>
+          <div class="card-body">
+            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px">
+              <div class="field" style="flex:1;min-width:140px">
+                <label data-ar="من تاريخ" data-en="From Date">من تاريخ</label>
+                <input type="date" id="exp-from">
+              </div>
+              <div class="field" style="flex:1;min-width:140px">
+                <label data-ar="إلى تاريخ" data-en="To Date">إلى تاريخ</label>
+                <input type="date" id="exp-to">
+              </div>
+              <div class="field" style="flex:1;min-width:140px">
+                <label data-ar="الحالة" data-en="Status">الحالة</label>
+                <select id="exp-status">
+                  <option value="">الكل / All</option>
+                  <option value="delivered">تم التوصيل / Delivered</option>
+                  <option value="out">خارج / Out</option>
+                  <option value="pending">انتظار / Pending</option>
+                  <option value="no-answer">لم يرد / No Answer</option>
+                  <option value="postponed">تأجيل / Postponed</option>
+                  <option value="address">تغيير عنوان / Address</option>
+                  <option value="refused">رفض / Refused</option>
+                  <option value="failed">فشل / Failed</option>
+                </select>
+              </div>
+              <div class="field" style="flex:1;min-width:140px">
+                <label data-ar="المندوب" data-en="Courier">المندوب</label>
+                <select id="exp-courier"><option value="">الكل / All</option></select>
+              </div>
+            </div>
+            <p style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--gray)" data-ar="اختاري الحقول" data-en="Select Fields">اختاري الحقول</p>
+            <div class="export-fields" id="export-fields"></div>
+            <div class="preview-box" id="export-preview">order_number | customer_name | ...</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button class="btn btn-primary" onclick="doExport()" data-ar="⬇ تصدير Excel/CSV" data-en="⬇ Export Excel/CSV">⬇ تصدير Excel/CSV</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- COURIER VIEW -->
+  <div id="courier-view" style="display:none">
+    <div class="main">
+      <div class="summary-grid" id="courier-summary" style="margin-bottom:20px"></div>
+      <div class="courier-layout">
+        <div class="order-list">
+          <div class="order-list-header" id="courier-list-header">أوردراتي النهارده</div>
+          <div id="courier-orders-list"><div class="loading"><div class="spinner"></div></div></div>
+        </div>
+        <div class="action-panel">
+          <div class="selected-info" id="selected-info">
+            <p style="color:var(--gray);font-size:13px" data-ar="اختار أوردر من اليسار" data-en="Select an order from the list">اختار أوردر من اليسار</p>
+          </div>
+          <div class="status-buttons">
+            <div class="section-lbl" data-ar="✅ تسليم ناجح" data-en="✅ Successful Delivery">✅ تسليم ناجح</div>
+            <div class="status-grid">
+              <button class="status-btn sb-delivered" onclick="setStatus('delivered')" data-ar-label="تم التوصيل" data-en-label="Delivered">
+                <span class="icon">✅</span><span class="lbl">تم التوصيل</span>
+              </button>
+              <button class="status-btn sb-out" onclick="setStatus('out')" data-ar-label="خارج للتوصيل" data-en-label="Out for Delivery">
+                <span class="icon">🚴</span><span class="lbl">خارج للتوصيل</span>
+              </button>
+            </div>
+            <div class="section-lbl" data-ar="⚠️ مشاكل العميل" data-en="⚠️ Customer Issues">⚠️ مشاكل العميل</div>
+            <div class="status-grid">
+              <button class="status-btn sb-no-answer" onclick="setStatus('no-answer')" data-ar-label="العميل لم يرد" data-en-label="No Answer">
+                <span class="icon">📵</span><span class="lbl">لم يرد</span>
+              </button>
+              <button class="status-btn sb-postponed" onclick="setStatus('postponed')" data-ar-label="طلب التأجيل" data-en-label="Postponed">
+                <span class="icon">📅</span><span class="lbl">طلب التأجيل</span>
+              </button>
+              <button class="status-btn sb-address" onclick="setStatus('address')" data-ar-label="تغيير العنوان" data-en-label="Address Change">
+                <span class="icon">📍</span><span class="lbl">تغيير العنوان</span>
+              </button>
+              <button class="status-btn sb-refused" onclick="setStatus('refused')" data-ar-label="رفض الاستلام" data-en-label="Refused">
+                <span class="icon">🚫</span><span class="lbl">رفض الاستلام</span>
+              </button>
+            </div>
+            <div class="section-lbl" data-ar="❌ أخرى" data-en="❌ Other">❌ أخرى</div>
+            <div class="status-grid">
+              <button class="status-btn sb-failed" onclick="setStatus('failed')" data-ar-label="فشل التوصيل" data-en-label="Failed">
+                <span class="icon">❌</span><span class="lbl">فشل التوصيل</span>
+              </button>
+              <button class="status-btn sb-pending" onclick="setStatus('pending')" data-ar-label="في الانتظار" data-en-label="Pending">
+                <span class="icon">⏳</span><span class="lbl">في الانتظار</span>
+              </button>
+            </div>
+          </div>
+          <div class="notes-box">
+            <div class="section-lbl" data-ar="📝 ملاحظات المندوب" data-en="📝 Courier Notes">📝 ملاحظات المندوب</div>
+            <textarea id="notes-input" rows="3" placeholder="اكتب ملاحظاتك هنا..." data-ar-ph="اكتب ملاحظاتك هنا..." data-en-ph="Write your notes here..."></textarea>
+            <button class="btn btn-accent" style="margin-top:10px;width:100%" onclick="saveNotes()" data-ar="💾 حفظ الملاحظات" data-en="💾 Save Notes">💾 حفظ الملاحظات</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD ORDER MODAL -->
+<div class="modal-bg" id="modal-order">
+  <div class="modal">
+    <h3 data-ar="أوردر جديد" data-en="New Order">أوردر جديد</h3>
+    <div class="form-grid">
+      <div class="field"><label data-ar="رقم الأوردر" data-en="Order Number">رقم الأوردر</label><input id="f-ordernum" placeholder="ORD-001"></div>
+      <div class="field"><label data-ar="رقم Shopify" data-en="Shopify ID">رقم Shopify</label><input id="f-shopify" placeholder="#5000"></div>
+      <div class="field"><label data-ar="اسم العميل" data-en="Customer Name">اسم العميل</label><input id="f-customer"></div>
+      <div class="field"><label data-ar="الهاتف" data-en="Phone">الهاتف</label><input id="f-phone" placeholder="01xxxxxxxxx"></div>
+      <div class="field"><label data-ar="المنطقة" data-en="Area">المنطقة</label><input id="f-area"></div>
+      <div class="field"><label data-ar="العنوان" data-en="Address">العنوان</label><input id="f-address"></div>
+      <div class="field"><label data-ar="المندوب" data-en="Courier">المندوب</label>
+        <select id="f-courier"><option value="">اختار مندوب</option></select>
+      </div>
+      <div class="field"><label data-ar="COD (جنيه)" data-en="COD (EGP)">COD (جنيه)</label><input id="f-cod" type="number" placeholder="0"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-order')" data-ar="إلغاء" data-en="Cancel">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveOrder()" data-ar="حفظ" data-en="Save">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD COURIER MODAL -->
+<div class="modal-bg" id="modal-courier">
+  <div class="modal">
+    <h3 data-ar="مندوب جديد" data-en="New Courier">مندوب جديد</h3>
+    <div class="form-grid">
+      <div class="field"><label data-ar="الاسم (إنجليزي)" data-en="Name (English)">الاسم (إنجليزي)</label><input id="fc-name"></div>
+      <div class="field"><label data-ar="الاسم (عربي)" data-en="Name (Arabic)">الاسم (عربي)</label><input id="fc-name-ar"></div>
+      <div class="field"><label data-ar="الإيميل" data-en="Email">الإيميل</label><input id="fc-email" type="email"></div>
+      <div class="field"><label data-ar="كلمة المرور" data-en="Password">كلمة المرور</label><input id="fc-pass" type="password"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-courier')" data-ar="إلغاء" data-en="Cancel">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveCourier()" data-ar="حفظ" data-en="Save">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://njrkvqfnddtlwqdckgkm.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5qcmt2cWZuZGR0bHdxZGNrZ2ttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4NDYzODMsImV4cCI6MjA5NjQyMjM4M30.bSfaOP78TDUJbS5nut00Q5s4kmFXFydIKL9_E41tJAo';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ADMIN credentials (hardcoded)
+const ADMIN_EMAIL = 'admin@swft.com';
+const ADMIN_PASS = 'swft2024admin';
+
+let currentUser = null; // {id, name, name_ar, email, role: 'admin'|'courier'}
+let currentLang = 'ar';
+let selectedOrderId = null;
+let allCouriers = [];
+let allOrders = [];
+
+const STATUS_AR = {
+  delivered: 'تم التوصيل', out: 'خارج للتوصيل', pending: 'في الانتظار',
+  failed: 'فشل التوصيل', 'no-answer': 'لم يرد', postponed: 'طلب التأجيل',
+  address: 'تغيير العنوان', refused: 'رفض الاستلام'
+};
+const STATUS_EN = {
+  delivered: 'Delivered', out: 'Out for Delivery', pending: 'Pending',
+  failed: 'Failed', 'no-answer': 'No Answer', postponed: 'Postponed',
+  address: 'Address Change', refused: 'Refused'
+};
+const STATUS_CLASS = {
+  delivered: 'b-delivered', out: 'b-out', pending: 'b-pending', failed: 'b-failed',
+  'no-answer': 'b-no-answer', postponed: 'b-postponed', address: 'b-address', refused: 'b-refused'
+};
+const ISSUE_STATUSES = ['no-answer','postponed','address','refused'];
+
+const EXPORT_FIELDS = [
+  {key:'order_number', ar:'رقم الأوردر', en:'Order #', checked:true},
+  {key:'shopify_id', ar:'رقم Shopify', en:'Shopify ID', checked:true},
+  {key:'customer_name', ar:'اسم العميل', en:'Customer', checked:true},
+  {key:'customer_phone', ar:'الهاتف', en:'Phone', checked:true},
+  {key:'area', ar:'المنطقة', en:'Area', checked:true},
+  {key:'address', ar:'العنوان', en:'Address', checked:true},
+  {key:'courier_name', ar:'المندوب', en:'Courier', checked:true},
+  {key:'cod', ar:'COD', en:'COD', checked:true},
+  {key:'status_label', ar:'الحالة', en:'Status', checked:true},
+  {key:'notes', ar:'ملاحظات', en:'Notes', checked:true},
+  {key:'updated_at', ar:'آخر تحديث', en:'Last Updated', checked:true},
+  {key:'created_at', ar:'تاريخ الإنشاء', en:'Created At', checked:true},
+];
+
+// ===== LANG =====
+function toggleLang() {
+  currentLang = currentLang === 'ar' ? 'en' : 'ar';
+  document.documentElement.lang = currentLang;
+  document.body.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+  document.body.className = currentLang === 'en' ? 'en' : '';
+  applyLang();
+}
+
+function applyLang() {
+  const ar = currentLang === 'ar';
+  document.querySelectorAll('[data-ar]').forEach(el => {
+    if (el.tagName === 'INPUT' || el.tagName === 'SELECT') return;
+    el.textContent = ar ? el.dataset.ar : el.dataset.en;
+  });
+  document.querySelectorAll('[data-ar-ph]').forEach(el => {
+    el.placeholder = ar ? el.dataset.arPh : el.dataset.enPh;
+  });
+  document.querySelectorAll('option[data-ar]').forEach(el => {
+    el.textContent = ar ? el.dataset.ar : el.dataset.en;
+  });
+  document.querySelectorAll('.lbl').forEach(el => {
+    const btn = el.closest('.status-btn');
+    if (btn) el.textContent = ar ? btn.dataset.arLabel : btn.dataset.enLabel;
+  });
+  if (document.getElementById('lang-btn')) {
+    document.getElementById('lang-btn').textContent = ar ? 'EN' : 'ع';
+  }
+  document.getElementById('login-sub').textContent = ar ? 'نظام إدارة الشحنات' : 'Courier Management System';
+  document.getElementById('lbl-email').textContent = ar ? 'البريد الإلكتروني' : 'Email';
+  document.getElementById('lbl-pass').textContent = ar ? 'كلمة المرور' : 'Password';
+  document.getElementById('login-btn-text').textContent = ar ? 'دخول' : 'Sign In';
+  if (document.getElementById('logout-btn')) {
+    document.getElementById('logout-btn').textContent = ar ? 'خروج' : 'Logout';
+  }
+  if (currentUser?.role === 'courier') {
+    document.getElementById('courier-list-header').textContent = ar ? 'أوردراتي النهارده' : "Today's Orders";
+    document.querySelectorAll('[data-ar]').forEach(el => {
+      el.textContent = ar ? el.dataset.ar : el.dataset.en;
+    });
+  }
+  renderExportFields();
+  if (allOrders.length) renderOrdersTable(allOrders);
+  if (currentUser?.role === 'courier') renderCourierOrders();
+}
+
+// ===== LOGIN =====
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  const pass = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+  document.getElementById('login-btn-text').textContent = currentLang === 'ar' ? 'جاري الدخول...' : 'Signing in...';
+
+  // Check admin
+  if (email === ADMIN_EMAIL && pass === ADMIN_PASS) {
+    currentUser = { id: 'admin', name: 'Admin', name_ar: 'أدمن', email: ADMIN_EMAIL, role: 'admin' };
+    showApp();
+    return;
+  }
+
+  // Check courier
+  const { data, error } = await sb.from('couriers').select('*').eq('email', email).single();
+  if (error || !data) {
+    errEl.textContent = currentLang === 'ar' ? 'بيانات غلط، حاول تاني' : 'Wrong credentials, try again';
+    errEl.style.display = 'block';
+    document.getElementById('login-btn-text').textContent = currentLang === 'ar' ? 'دخول' : 'Sign In';
+    return;
+  }
+  if (data.password_hash !== pass) {
+    errEl.textContent = currentLang === 'ar' ? 'كلمة المرور غلط' : 'Wrong password';
+    errEl.style.display = 'block';
+    document.getElementById('login-btn-text').textContent = currentLang === 'ar' ? 'دخول' : 'Sign In';
+    return;
+  }
+  if (!data.is_active) {
+    errEl.textContent = currentLang === 'ar' ? 'الحساب موقوف' : 'Account disabled';
+    errEl.style.display = 'block';
+    document.getElementById('login-btn-text').textContent = currentLang === 'ar' ? 'دخول' : 'Sign In';
+    return;
+  }
+  currentUser = { ...data, role: 'courier' };
+  showApp();
+}
+
+document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  const ar = currentLang === 'ar';
+  document.getElementById('topbar-user').textContent = ar ? currentUser.name_ar : currentUser.name;
+  document.getElementById('topbar-role').textContent = currentUser.role === 'admin' ? (ar ? 'أدمن' : 'Admin') : (ar ? 'مندوب' : 'Courier');
+
+  if (currentUser.role === 'admin') {
+    document.getElementById('admin-view').style.display = 'block';
+    document.getElementById('courier-view').style.display = 'none';
+    initAdmin();
+  } else {
+    document.getElementById('admin-view').style.display = 'none';
+    document.getElementById('courier-view').style.display = 'block';
+    initCourier();
+  }
+  applyLang();
+  const today = new Date().toISOString().split('T')[0];
+  if (document.getElementById('exp-from')) { document.getElementById('exp-from').value = today; document.getElementById('exp-to').value = today; }
+}
+
+function doLogout() {
+  currentUser = null; selectedOrderId = null; allOrders = []; allCouriers = [];
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-error').style.display = 'none';
+  document.getElementById('login-btn-text').textContent = currentLang === 'ar' ? 'دخول' : 'Sign In';
+}
+
+// ===== ADMIN =====
+async function initAdmin() {
+  await loadCouriers();
+  await loadOrders();
+  renderExportFields();
+  populateCourierDropdowns();
+}
+
+function adminTab(tab) {
+  ['orders','couriers','export'].forEach(t => {
+    document.getElementById('atab-'+t)?.classList.toggle('active', t===tab);
+    document.getElementById('admin-'+t)?.classList.toggle('active', t===tab);
+  });
+  if (tab === 'couriers') loadCouriersTable();
+}
+
+async function loadCouriers() {
+  const { data } = await sb.from('couriers').select('*').order('name');
+  allCouriers = data || [];
+  populateCourierDropdowns();
+}
+
+function populateCourierDropdowns() {
+  ['filter-courier','f-courier','exp-courier'].forEach(id => {
+    const el = document.getElementById(id); if (!el) return;
+    const first = el.options[0];
+    el.innerHTML = ''; el.appendChild(first);
+    allCouriers.forEach(c => {
+      const o = document.createElement('option');
+      o.value = c.id;
+      o.textContent = currentLang === 'ar' ? c.name_ar : c.name;
+      el.appendChild(o);
+    });
+  });
+}
+
+async function loadOrders() {
+  const q = document.getElementById('search-q')?.value?.toLowerCase() || '';
+  const st = document.getElementById('filter-status')?.value || '';
+  const courier = document.getElementById('filter-courier')?.value || '';
+
+  let query = sb.from('orders').select('*, couriers(name, name_ar)').order('created_at', {ascending: false});
+  if (st) query = query.eq('status', st);
+  if (courier) query = query.eq('courier_id', courier);
+
+  const { data, error } = await query;
+  let orders = data || [];
+  if (q) orders = orders.filter(o => (o.customer_name||'').toLowerCase().includes(q) || (o.order_number||'').toLowerCase().includes(q) || (o.customer_phone||'').includes(q));
+
+  allOrders = orders;
+  renderOrdersTable(orders);
+  calcStats(orders);
+}
+
+function calcStats(orders) {
+  const c = (st) => orders.filter(o => o.status === st).length;
+  document.getElementById('st-delivered').textContent = c('delivered');
+  document.getElementById('st-out').textContent = c('out');
+  document.getElementById('st-pending').textContent = c('pending');
+  document.getElementById('st-noanswer').textContent = c('no-answer');
+  document.getElementById('st-failed').textContent = c('failed');
+  document.getElementById('st-issues').textContent = orders.filter(o => ISSUE_STATUSES.includes(o.status)).length;
+}
+
+function renderOrdersTable(orders) {
+  const ar = currentLang === 'ar';
+  const tbody = document.getElementById('orders-tbody');
+  if (!orders.length) { tbody.innerHTML = `<tr><td colspan="9"><div class="empty">${ar ? 'لا توجد أوردرات' : 'No orders found'}</div></td></tr>`; return; }
+  tbody.innerHTML = orders.map(o => {
+    const cname = o.couriers ? (ar ? o.couriers.name_ar : o.couriers.name) : '—';
+    const statusLabel = ar ? (STATUS_AR[o.status] || o.status) : (STATUS_EN[o.status] || o.status);
+    const updated = o.updated_at ? new Date(o.updated_at).toLocaleTimeString('ar-EG', {hour:'2-digit',minute:'2-digit'}) : '—';
+    return `<tr>
+      <td title="${o.order_number}">${o.order_number}</td>
+      <td title="${o.customer_name}">${o.customer_name}</td>
+      <td>${o.customer_phone || '—'}</td>
+      <td>${o.area || '—'}</td>
+      <td>${cname}</td>
+      <td style="font-weight:600;color:var(--success)">${(o.cod||0).toLocaleString()} ج</td>
+      <td><span class="badge ${STATUS_CLASS[o.status] || ''}">${statusLabel}</span></td>
+      <td title="${o.notes||''}">${o.notes ? o.notes.slice(0,30)+(o.notes.length>30?'...':'') : '—'}</td>
+      <td>${updated}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function loadCouriersTable() {
+  const { data: couriers } = await sb.from('couriers').select('*').order('name');
+  const { data: orders } = await sb.from('orders').select('courier_id, status');
+  const tbody = document.getElementById('couriers-tbody');
+  const ar = currentLang === 'ar';
+  if (!couriers?.length) { tbody.innerHTML = `<tr><td colspan="6"><div class="empty">${ar?'لا يوجد مناديب':'No couriers'}</div></td></tr>`; return; }
+  tbody.innerHTML = couriers.map(c => {
+    const myOrders = (orders||[]).filter(o => o.courier_id === c.id);
+    const delivered = myOrders.filter(o => o.status === 'delivered').length;
+    return `<tr>
+      <td>${c.name}</td>
+      <td>${c.name_ar}</td>
+      <td>${c.email}</td>
+      <td><span class="badge ${c.is_active ? 'b-delivered' : 'b-failed'}">${c.is_active ? (ar?'نشط':'Active') : (ar?'موقوف':'Inactive')}</span></td>
+      <td>${delivered} / ${myOrders.length}</td>
+      <td><button class="btn btn-sm btn-outline" onclick="toggleCourier('${c.id}',${c.is_active})">${c.is_active ? (ar?'إيقاف':'Disable') : (ar?'تفعيل':'Enable')}</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function toggleCourier(id, active) {
+  await sb.from('couriers').update({is_active: !active}).eq('id', id);
+  loadCouriersTable();
+  showToast(currentLang === 'ar' ? 'تم التحديث ✓' : 'Updated ✓', 'success');
+}
+
+// ADD ORDER
+function openAddOrder() {
+  document.getElementById('modal-order').classList.add('open');
+  populateCourierDropdowns();
+}
+async function saveOrder() {
+  const data = {
+    order_number: document.getElementById('f-ordernum').value,
+    shopify_id: document.getElementById('f-shopify').value,
+    customer_name: document.getElementById('f-customer').value,
+    customer_phone: document.getElementById('f-phone').value,
+    area: document.getElementById('f-area').value,
+    address: document.getElementById('f-address').value,
+    courier_id: document.getElementById('f-courier').value || null,
+    cod: parseFloat(document.getElementById('f-cod').value) || 0,
+    status: 'pending'
+  };
+  if (!data.order_number || !data.customer_name) { showToast(currentLang==='ar'?'ادخل رقم الأوردر والعميل':'Enter order number and customer', 'error'); return; }
+  const { error } = await sb.from('orders').insert(data);
+  if (error) { showToast('Error: '+error.message, 'error'); return; }
+  closeModal('modal-order');
+  showToast(currentLang==='ar'?'تم إضافة الأوردر ✓':'Order added ✓', 'success');
+  loadOrders();
+}
+
+// ADD COURIER
+function openAddCourier() { document.getElementById('modal-courier').classList.add('open'); }
+async function saveCourier() {
+  const data = {
+    name: document.getElementById('fc-name').value,
+    name_ar: document.getElementById('fc-name-ar').value,
+    email: document.getElementById('fc-email').value,
+    password_hash: document.getElementById('fc-pass').value,
+    is_active: true
+  };
+  if (!data.name || !data.email || !data.password_hash) { showToast(currentLang==='ar'?'ادخل كل البيانات':'Fill all fields', 'error'); return; }
+  const { error } = await sb.from('couriers').insert(data);
+  if (error) { showToast('Error: '+error.message, 'error'); return; }
+  closeModal('modal-courier');
+  showToast(currentLang==='ar'?'تم إضافة المندوب ✓':'Courier added ✓', 'success');
+  loadCouriers();
+  loadCouriersTable();
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ===== EXPORT =====
+function renderExportFields() {
+  const ar = currentLang === 'ar';
+  const container = document.getElementById('export-fields');
+  if (!container) return;
+  container.innerHTML = EXPORT_FIELDS.map((f,i) => `
+    <label class="field-check ${f.checked?'checked':''}">
+      <input type="checkbox" ${f.checked?'checked':''} onchange="toggleExportField(${i},this.checked)">
+      ${ar ? f.ar : f.en}
+    </label>`).join('');
+  updateExportPreview();
+}
+
+function toggleExportField(i, v) {
+  EXPORT_FIELDS[i].checked = v;
+  document.querySelectorAll('.field-check')[i]?.classList.toggle('checked', v);
+  updateExportPreview();
+}
+
+function updateExportPreview() {
+  const ar = currentLang === 'ar';
+  const active = EXPORT_FIELDS.filter(f => f.checked);
+  const headers = active.map(f => ar ? f.ar : f.en).join(' | ');
+  const el = document.getElementById('export-preview');
+  if (el) el.textContent = headers;
+}
+
+async function doExport() {
+  const st = document.getElementById('exp-status')?.value || '';
+  const courier = document.getElementById('exp-courier')?.value || '';
+  let query = sb.from('orders').select('*, couriers(name, name_ar)').order('created_at', {ascending: false});
+  if (st) query = query.eq('status', st);
+  if (courier) query = query.eq('courier_id', courier);
+  const { data } = await query;
+  exportToCSV(data || []);
+}
+
+function exportCSV() { exportToCSV(allOrders); }
+
+function exportToCSV(orders) {
+  const ar = currentLang === 'ar';
+  const active = EXPORT_FIELDS.filter(f => f.checked);
+  const headers = active.map(f => ar ? f.ar : f.en).join(',');
+  const rows = orders.map(o => {
+    const cname = o.couriers ? (ar ? o.couriers.name_ar : o.couriers.name) : '';
+    const enriched = { ...o, courier_name: cname, status_label: ar ? STATUS_AR[o.status] : STATUS_EN[o.status] };
+    return active.map(f => {
+      const v = enriched[f.key] ?? '';
+      return '"'+String(v).replace(/"/g,'""')+'"';
+    }).join(',');
+  });
+  const csv = '\uFEFF'+headers+'\n'+rows.join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `swft-orders-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(ar ? 'تم التصدير ✓' : 'Exported ✓', 'success');
+}
+
+// ===== COURIER =====
+async function initCourier() {
+  await loadCourierOrders();
+}
+
+async function loadCourierOrders() {
+  const { data } = await sb.from('orders').select('*').eq('courier_id', currentUser.id).order('created_at', {ascending: false});
+  allOrders = data || [];
+  renderCourierOrders();
+  renderCourierSummary();
+}
+
+function renderCourierOrders() {
+  const ar = currentLang === 'ar';
+  const container = document.getElementById('courier-orders-list');
+  if (!allOrders.length) { container.innerHTML = `<div class="empty">${ar?'لا توجد أوردرات اليوم':'No orders today'}</div>`; return; }
+  container.innerHTML = allOrders.map(o => {
+    const statusLabel = ar ? STATUS_AR[o.status] : STATUS_EN[o.status];
+    return `<div class="order-item ${selectedOrderId===o.id?'selected':''}" onclick="selectOrder('${o.id}')">
+      <div class="order-item-top">
+        <span class="order-num">${o.order_number}</span>
+        <span class="order-cod">${(o.cod||0).toLocaleString()} ج</span>
+      </div>
+      <div class="order-name">${o.customer_name}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span class="order-area">${o.area||''}</span>
+        <span class="badge ${STATUS_CLASS[o.status]||''}" style="font-size:10px;padding:2px 8px">${statusLabel}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderCourierSummary() {
+  const ar = currentLang === 'ar';
+  const delivered = allOrders.filter(o => o.status === 'delivered');
+  const issues = allOrders.filter(o => ISSUE_STATUSES.includes(o.status));
+  const cod = delivered.reduce((s,o) => s+(o.cod||0), 0);
+  document.getElementById('courier-summary').innerHTML = `
+    <div class="summary-item"><div class="summary-num" style="color:var(--success)">${delivered.length}/${allOrders.length}</div><div class="summary-lbl">${ar?'تم التوصيل':'Delivered'}</div></div>
+    <div class="summary-item"><div class="summary-num" style="color:var(--danger)">${issues.length}</div><div class="summary-lbl">${ar?'تحتاج متابعة':'Issues'}</div></div>
+    <div class="summary-item"><div class="summary-num" style="color:var(--success)">${cod.toLocaleString()}</div><div class="summary-lbl">${ar?'COD محصل (ج)':'COD (EGP)'}</div></div>`;
+}
+
+function selectOrder(id) {
+  selectedOrderId = id;
+  const o = allOrders.find(x => x.id === id);
+  const ar = currentLang === 'ar';
+  document.getElementById('selected-info').innerHTML = `
+    <h3>${o.order_number}</h3>
+    <div class="info-row"><span class="info-label">${ar?'العميل':'Customer'}</span><span>${o.customer_name}</span></div>
+    <div class="info-row"><span class="info-label">${ar?'الهاتف':'Phone'}</span><span>${o.customer_phone||'—'}</span></div>
+    <div class="info-row"><span class="info-label">${ar?'المنطقة':'Area'}</span><span>${o.area||'—'}</span></div>
+    <div class="info-row"><span class="info-label">${ar?'العنوان':'Address'}</span><span>${o.address||'—'}</span></div>
+    <div class="info-row"><span class="info-label">${ar?'الحالة':'Status'}</span><span class="badge ${STATUS_CLASS[o.status]||''}">${ar?STATUS_AR[o.status]:STATUS_EN[o.status]}</span></div>
+    <div class="cod-big">${(o.cod||0).toLocaleString()} ${ar?'جنيه COD':'EGP COD'}</div>`;
+  document.getElementById('notes-input').value = o.notes || '';
+  renderCourierOrders();
+}
+
+async function setStatus(status) {
+  if (!selectedOrderId) { showToast(currentLang==='ar'?'اختار أوردر الأول':'Select an order first', 'error'); return; }
+  const notes = document.getElementById('notes-input').value;
+  const { error } = await sb.from('orders').update({ status, notes, updated_at: new Date().toISOString() }).eq('id', selectedOrderId);
+  if (error) { showToast('Error: '+error.message, 'error'); return; }
+  const o = allOrders.find(x => x.id === selectedOrderId);
+  if (o) { o.status = status; o.notes = notes; }
+  renderCourierOrders();
+  renderCourierSummary();
+  selectOrder(selectedOrderId);
+  const ar = currentLang === 'ar';
+  showToast(ar ? 'تم التحديث ✓' : 'Updated ✓', 'success');
+}
+
+async function saveNotes() {
+  if (!selectedOrderId) { showToast(currentLang==='ar'?'اختار أوردر الأول':'Select an order first', 'error'); return; }
+  const notes = document.getElementById('notes-input').value;
+  await sb.from('orders').update({ notes, updated_at: new Date().toISOString() }).eq('id', selectedOrderId);
+  const o = allOrders.find(x => x.id === selectedOrderId);
+  if (o) o.notes = notes;
+  showToast(currentLang==='ar'?'تم حفظ الملاحظات ✓':'Notes saved ✓', 'success');
+}
+
+// ===== TOAST =====
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// INIT
+applyLang();
+</script>
+</body>
+</html>
